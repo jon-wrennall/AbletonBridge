@@ -32,9 +32,8 @@ logger = logging.getLogger("AbletonBridge")
 
 MIDI_PORT_NAME = "AbletonBridge"
 
-# Path to the midi_cc/ directory (sits alongside the MCP_Server/ package)
-_PACKAGE_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-CC_MAPS_DIR = os.path.join(_PACKAGE_ROOT, "midi_cc")
+# Path to the midi_cc/ directory — inside the MCP_Server package
+CC_MAPS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "midi_cc")
 
 # ── Module-level state ────────────────────────────────────────────────────────
 
@@ -83,7 +82,7 @@ def _load_cc_maps() -> None:
         return
     for path in glob.glob(os.path.join(CC_MAPS_DIR, "*.json")):
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             stem = os.path.splitext(os.path.basename(path))[0]
             _cc_maps[stem] = data
@@ -101,7 +100,7 @@ def _find_cc_map_for_plugin(plugin_name: str) -> Optional[dict]:
     name_lower = plugin_name.lower()
     for _stem, cc_map in _cc_maps.items():
         for pattern in cc_map.get("match_patterns", []):
-            if pattern.lower() in name_lower or name_lower in pattern.lower():
+            if pattern.lower() in name_lower:
                 _plugin_cc_map_cache[plugin_name] = cc_map
                 return cc_map
     _plugin_cc_map_cache[plugin_name] = None
@@ -183,6 +182,8 @@ def register_tools(mcp) -> None:
         # Determine MIDI channel
         if midi_channel is not None:
             channel = _i(midi_channel)
+            if channel < 1 or channel > 16:
+                return f"Error: midi_channel must be 1\u201316, got {channel}."
         elif track_index in _track_cc_channels:
             channel = _track_cc_channels[track_index]
         else:
