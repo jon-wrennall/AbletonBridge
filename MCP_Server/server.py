@@ -122,11 +122,16 @@ def _m4l_auto_connect():
             data, _addr = conn.recv_sock.recvfrom(65535)
             result = conn._parse_m4l_response(data)
             if result.get("status") == "success":
-                logger.info("M4L bridge auto-connected on attempt %d", attempt)
                 state.m4l_ping_cache["result"] = True
                 state.m4l_ping_cache["timestamp"] = time.time()
-                # Check bridge version compatibility
+                state.m4l_last_success_time = time.time()
+                # Check bridge version compatibility (also logs connect message)
                 M4LConnection._check_bridge_version(result)
+                logger.info(
+                    "M4L bridge ready (attempt %d/15) — drag AbletonBridge.amxd "
+                    "onto an audio track if this was not immediate",
+                    attempt,
+                )
                 return
         except socket.timeout:
             logger.info(

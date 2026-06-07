@@ -79,6 +79,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   </div>
   <div id="status-banner"></div>
   <div class="grid" id="cards"></div>
+  <div class="section" id="m4l-detail"></div>
   <div class="section" id="top-tools-section"></div>
   <div class="section">
     <h2>Recent Tool Calls</h2>
@@ -106,26 +107,53 @@ async function refresh() {
     const d = await r.json();
     // Status banner
     const sb = document.getElementById('status-banner');
-    if (d.ableton_connected && d.m4l_connected) {
-      sb.innerHTML = '<div class="status-banner banner-ok"><span class="dot"></span>All systems operational — Ableton + M4L Bridge connected and ready</div>';
-    } else if (d.ableton_connected && !d.m4l_connected) {
-      sb.innerHTML = '<div class="status-banner banner-warn"><span class="dot"></span>Ableton connected — M4L Bridge '+(d.m4l_sockets_ready?'waiting for device response':'not connected')+'</div>';
+    if (!d.ableton_connected) {
+      sb.innerHTML = '<div class="status-banner banner-err"><span class="dot"></span>Ableton not connected — make sure the AbletonBridge Remote Script is loaded in Ableton Preferences → Tempo &amp; MIDI → Control Surfaces</div>';
+    } else if (d.ableton_connected && d.m4l_connected && d.m4l_version_match === true) {
+      sb.innerHTML = '<div class="status-banner banner-ok"><span class="dot"></span>All systems operational — Ableton + M4L Bridge v'+d.m4l_bridge_version+' connected</div>';
+    } else if (d.ableton_connected && d.m4l_connected && d.m4l_version_match === false) {
+      sb.innerHTML = '<div class="status-banner banner-warn"><span class="dot"></span>Ableton connected — M4L Bridge connected but version mismatch (server v'+d.version+', bridge v'+d.m4l_bridge_version+'). Update Devicev2.amxd from M4L_Device/ folder.</div>';
+    } else if (d.ableton_connected && d.m4l_sockets_ready) {
+      sb.innerHTML = '<div class="status-banner banner-warn"><span class="dot"></span>Ableton connected — M4L Bridge not responding. Drag AbletonBridge from User Library → Presets → Audio Effects → Max Audio Effect onto an audio track.</div>';
     } else {
-      sb.innerHTML = '<div class="status-banner banner-err"><span class="dot"></span>Ableton not connected — make sure the Remote Script is loaded</div>';
+      sb.innerHTML = '<div class="status-banner banner-warn"><span class="dot"></span>Ableton connected — M4L Bridge not started. 43 deep-control tools unavailable.</div>';
+    }
+    // M4L detail string
+    let m4lLabel, m4lClass;
+    if (d.m4l_connected) {
+      m4lLabel = 'v'+(d.m4l_bridge_version||'?');
+      m4lClass = d.m4l_version_match === false ? 'status-warn' : 'status-ok';
+    } else if (d.m4l_sockets_ready) {
+      m4lLabel = 'Waiting…';
+      m4lClass = 'status-warn';
+    } else {
+      m4lLabel = 'Not loaded';
+      m4lClass = 'status-err';
     }
     document.getElementById('cards').innerHTML = [
-      card('Server Version', d.version, ''),
+      card('Server Version', 'v'+d.version, ''),
       card('Uptime', fmtUp(d.uptime_seconds), ''),
       card('Ableton', d.ableton_connected?'Connected':'Disconnected',
            d.ableton_connected?'status-ok':'status-err'),
-      card('M4L Bridge',
-           d.m4l_connected?'Connected':d.m4l_sockets_ready?'Sockets Ready':'Disconnected',
-           d.m4l_connected?'status-ok':d.m4l_sockets_ready?'status-warn':'status-err'),
+      card('M4L Bridge', m4lLabel, m4lClass),
+      card('M4L Last Seen', d.m4l_last_seen||'Never', d.m4l_last_seen?'':'status-err'),
       card('Snapshots', d.store_counts.snapshots, ''),
       card('Macros', d.store_counts.macros, ''),
-      card('Param Maps', d.store_counts.param_maps, ''),
       card('Total Tool Calls', d.total_tool_calls, ''),
     ].join('');
+    // M4L detail panel
+    const m4lPanel = document.getElementById('m4l-detail');
+    if (m4lPanel) {
+      let rows = [
+        ['UDP Sockets', d.m4l_sockets_ready ? '<span class="status-ok">Bound (9878→9879)</span>' : '<span class="status-err">Not bound</span>'],
+        ['Device responding', d.m4l_connected ? '<span class="status-ok">Yes</span>' : '<span class="status-err">No — load AbletonBridge.amxd on an audio track</span>'],
+        ['Bridge version', d.m4l_bridge_version ? ('v'+d.m4l_bridge_version) : '<span class="status-err">Unknown</span>'],
+        ['Version match', d.m4l_version_match === true ? '<span class="status-ok">✓ Matches server v'+d.version+'</span>' : d.m4l_version_match === false ? '<span class="status-warn">✗ Mismatch — update Devicev2.amxd from M4L_Device/</span>' : '<span style="color:#484f58">Unknown</span>'],
+        ['Last connected', d.m4l_last_seen || '<span class="status-err">Never this session</span>'],
+      ];
+      m4lPanel.innerHTML = '<h2>M4L Bridge (Parameter Extension)</h2>' +
+        '<table><tbody>' + rows.map(([k,v]) => '<tr><td style="width:180px;color:#8b949e">'+k+'</td><td>'+v+'</td></tr>').join('') + '</tbody></table>';
+    }
     // Top tools
     const tt = document.getElementById('top-tools-section');
     if (d.top_tools.length) {

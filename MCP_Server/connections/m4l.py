@@ -612,10 +612,12 @@ class M4LConnection:
 
     def ping(self) -> bool:
         """Check if the M4L bridge device is responding."""
+        import time as _time
         try:
             result = self.send_command("ping")
             success = result.get("status") == "success"
             if success:
+                state.m4l_last_success_time = _time.time()
                 self._check_bridge_version(result)
             return success
         except Exception as e:
@@ -638,23 +640,27 @@ class M4LConnection:
             logger.info("M4L bridge did not report a version (older bridge?)")
             return
 
+        import time as _time
         state.m4l_bridge_version = bridge_version
+        state.m4l_last_success_time = _time.time()
 
         # Compare major.minor parts for compatibility
         try:
             server_parts = server_version.split(".")[:2]
             bridge_parts = bridge_version.split(".")[:2]
             if server_parts != bridge_parts:
+                state.m4l_version_match = False
                 logger.warning(
-                    "Version mismatch: MCP server v%s, M4L bridge v%s. "
+                    "M4L version mismatch: MCP server v%s, M4L bridge v%s. "
                     "Some features may not work correctly. "
-                    "Please update both components to matching versions.",
+                    "Update Devicev2.amxd from the M4L_Device/ folder to fix.",
                     server_version,
                     bridge_version,
                 )
             else:
+                state.m4l_version_match = True
                 logger.info(
-                    "M4L bridge version %s matches server version %s",
+                    "M4L bridge v%s connected — versions match server v%s",
                     bridge_version,
                     server_version,
                 )

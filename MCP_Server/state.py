@@ -63,9 +63,11 @@ m4l_ping_cache: Dict[str, Any] = {"result": False, "timestamp": 0.0}
 M4L_PING_CACHE_TTL: float = 5.0
 
 # ---------------------------------------------------------------------------
-# M4L bridge version (populated after successful ping)
+# M4L bridge version and health (populated after successful ping)
 # ---------------------------------------------------------------------------
 m4l_bridge_version: str = ""
+m4l_last_success_time: float = 0.0    # epoch seconds of last successful ping
+m4l_version_match: Optional[bool] = None  # True=ok, False=mismatch, None=unknown
 
 # ---------------------------------------------------------------------------
 # Config (from environment or defaults)

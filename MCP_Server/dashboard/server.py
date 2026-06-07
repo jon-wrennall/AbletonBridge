@@ -121,12 +121,26 @@ def build_status_json() -> dict:
     mcp = state.mcp_instance
     tool_count = len(mcp._tool_manager._tools) if mcp and hasattr(mcp, '_tool_manager') else 331
 
+    now = time.time()
+    m4l_last_seen = None
+    if state.m4l_last_success_time:
+        elapsed = now - state.m4l_last_success_time
+        if elapsed < 60:
+            m4l_last_seen = f"{int(elapsed)}s ago"
+        elif elapsed < 3600:
+            m4l_last_seen = f"{int(elapsed/60)}m ago"
+        else:
+            m4l_last_seen = f"{int(elapsed/3600)}h ago"
+
     return {
         "version": get_server_version(),
-        "uptime_seconds": round(time.time() - state.server_start_time, 1) if state.server_start_time else 0,
+        "uptime_seconds": round(now - state.server_start_time, 1) if state.server_start_time else 0,
         "ableton_connected": ableton_connected,
         "m4l_connected": m4l_connected,
         "m4l_sockets_ready": m4l_sockets_ready,
+        "m4l_bridge_version": state.m4l_bridge_version or None,
+        "m4l_version_match": state.m4l_version_match,
+        "m4l_last_seen": m4l_last_seen,
         "store_counts": {
             "snapshots": len(state.snapshot_store),
             "macros": len(state.macro_store),
