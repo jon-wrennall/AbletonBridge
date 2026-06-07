@@ -189,8 +189,17 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
         try:
             state.singleton_lock_sock = _acquire_singleton_lock()
         except RuntimeError as e:
-            logger.error(str(e))
-            logger.error("Exiting to avoid conflicts.")
+            msg = (
+                f"{e}\n"
+                "This usually means Claude Desktop (or another MCP host) is already\n"
+                "running AbletonBridge. Only one instance can run at a time.\n"
+                "Fix: remove AbletonBridge from claude_desktop_config.json, restart\n"
+                "Claude Desktop, then kill any lingering process:\n"
+                "  lsof -ti :9881 | xargs kill -9\n"
+                "  lsof -ti :9877 | xargs kill -9"
+            )
+            logger.error(msg)
+            print(msg, file=sys.stderr, flush=True)
             sys.exit(1)
 
         logger.info("AbletonBridge server starting up")
