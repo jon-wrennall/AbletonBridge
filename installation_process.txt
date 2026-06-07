@@ -11,7 +11,7 @@ Before starting, make sure you have the following installed:
   - Ableton Live 10 or newer (11+ recommended, 12 for full feature support)
   - Python 3.10 or newer
   - uv package manager (https://docs.astral.sh/uv/getting-started/installation/)
-  - Claude Desktop, Claude.ai, or Cursor (as your AI assistant / MCP host)
+  - An MCP host: Claude Cowork (recommended), Claude Desktop, Claude Code, or Cursor
   - Node.js (only if using Smithery auto-install)
 
 
@@ -82,7 +82,30 @@ server can send commands to Ableton.
 STEP 3: CONFIGURE YOUR AI ASSISTANT (MCP HOST)
 ================================================================================
 
---- Option A: Claude Desktop ---
+--- Option A: Claude Cowork (Recommended) ---
+
+  The easiest setup — a ready-to-install plugin is included in the cowork-plugin/
+  directory. It configures the MCP server and loads four domain-specific skills
+  (Compose, Mix, Session, Deep Control) automatically.
+
+  1. Open cowork-plugin/.mcp.json and replace /path/to/AbletonBridge with the
+     actual path to this repository on your machine.
+
+  2. Package the plugin:
+
+     cd cowork-plugin && zip -r ../ableton-bridge.plugin . -x "*.DS_Store"
+
+  3. In Cowork, go to Settings > Capabilities > Plugins and install
+     ableton-bridge.plugin.
+
+  4. Make sure Ableton is open with the AbletonBridge Remote Script active.
+     The MCP server starts automatically when you open a Cowork session.
+
+  IMPORTANT: If AbletonBridge is also configured in Claude Desktop, remove it
+  from claude_desktop_config.json first. Claude Desktop will auto-start the
+  server on ports 9877/9880 and Cowork's instance will fail to bind.
+
+--- Option B: Claude Desktop ---
 
   1. Open Claude Desktop.
   2. Go to Claude > Settings > Developer > Edit Config.
@@ -102,7 +125,7 @@ STEP 3: CONFIGURE YOUR AI ASSISTANT (MCP HOST)
 
   4. Save the file and restart Claude Desktop.
 
---- Option B: Claude Code (CLI) ---
+--- Option C: Claude Code (CLI) ---
 
   Add to your Claude Code MCP settings:
 
@@ -115,7 +138,7 @@ STEP 3: CONFIGURE YOUR AI ASSISTANT (MCP HOST)
        }
      }
 
---- Option C: Cursor ---
+--- Option D: Cursor ---
 
   1. Go to Cursor Settings > MCP.
   2. Add a new server with the command:
@@ -124,8 +147,18 @@ STEP 3: CONFIGURE YOUR AI ASSISTANT (MCP HOST)
 
   3. Save and restart Cursor.
 
-*** Only run ONE instance of the MCP server (either Claude Desktop OR Cursor),
-    not both at the same time. ***
+*** IMPORTANT: Only run ONE instance of the MCP server at a time. ***
+    The server binds to ports 9877 (Remote Script), 9880 (dashboard), and
+    optionally 9878/9879 (M4L bridge). If two hosts try to start it simultaneously
+    (e.g. Claude Desktop and Cowork both have it configured), the second instance
+    will fail to bind and report a connection error.
+
+    If switching from Claude Desktop to Cowork: remove the AbletonBridge entry
+    from claude_desktop_config.json and restart Claude Desktop before using the
+    Cowork plugin. Kill any lingering processes with:
+
+        lsof -ti :9877 | xargs kill -9
+        lsof -ti :9880 | xargs kill -9
 
 
 ================================================================================
@@ -260,9 +293,11 @@ TROUBLESHOOTING
     - Ensure Python 3.10+ is installed: python --version
     - If using multiple Python versions, specify the correct one in your config.
 
-  Dashboard not loading:
-    - Check that Claude Desktop is running the server (restart after config change).
-    - If port 9880 is in use, set ABLETON_BRIDGE_DASHBOARD_PORT env var.
+  Dashboard not loading / port already in use:
+    - Only one MCP host should be running AbletonBridge at a time.
+    - If Claude Desktop and Cowork are both configured, remove one.
+    - Kill lingering processes: lsof -ti :9877 | xargs kill -9
+    - If port 9880 conflicts with another app, set ABLETON_BRIDGE_DASHBOARD_PORT env var.
 
   General fix:
     - Restart both Claude/Cursor and Ableton Live.
