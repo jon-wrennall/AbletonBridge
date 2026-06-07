@@ -4,6 +4,20 @@ All notable changes to AbletonBridge will be documented in this file.
 
 ---
 
+## v4.0.0-d — 2026-06-07
+
+### Dependencies: MIDI CC support promoted to core
+
+`mido` and `python-rtmidi` moved from `[project.optional-dependencies]` to core `dependencies` so that `set_plugin_parameter_cc` works out of the box with a plain `uv run` — no extra install step required.
+
+#### Files modified
+- `pyproject.toml` — added `mido>=1.3` and `python-rtmidi>=1.5` to core dependencies
+- `uv.lock` — regenerated
+
+### Tool count: **340** core + **19 optional** (ElevenLabs) = **359 total**
+
+---
+
 ## v4.0.0-c — 2026-04-20
 
 ### New Tools: Arrangement Composition Analysis & Rack Macro Control
