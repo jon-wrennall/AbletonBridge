@@ -1,11 +1,11 @@
 {
   "mcpServers": {
     "AbletonBridge": {
-      "command": "/opt/homebrew/bin/uv",
+      "command": "uv",
       "args": [
         "run",
         "--directory",
-        "/Users/jonwrennall/Documents/Claude/Projects/Music/AbletonBridge",
+        "/path/to/AbletonBridge",
         "MCP_Server/server.py"
       ]
     }
