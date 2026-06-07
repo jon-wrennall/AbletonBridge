@@ -101,9 +101,20 @@ STEP 3: CONFIGURE YOUR AI ASSISTANT (MCP HOST)
   4. Make sure Ableton is open with the AbletonBridge Remote Script active.
      The MCP server starts automatically when you open a Cowork session.
 
-  IMPORTANT: If AbletonBridge is also configured in Claude Desktop, remove it
-  from claude_desktop_config.json first. Claude Desktop will auto-start the
-  server on ports 9877/9880 and Cowork's instance will fail to bind.
+  IMPORTANT — DO NOT add AbletonBridge to claude_desktop_config.json when
+  using Cowork. Claude Desktop auto-starts every server in that file on launch,
+  even when you are not using a Desktop conversation. This means Desktop will
+  silently hold ports 9877/9880/9881 before Cowork even opens, and Cowork's
+  server instance will fail with a singleton lock error.
+
+  The correct setup is: plugin .mcp.json only (already done when you install
+  the plugin). Cowork starts the server itself when you open a session.
+
+  If you previously added AbletonBridge to claude_desktop_config.json:
+    1. Remove the "AbletonBridge" block from claude_desktop_config.json
+    2. Restart Claude Desktop
+    3. Kill any lingering server: lsof -ti :9881 | xargs kill -9
+    4. Open a new Cowork session — it will start the server automatically
 
 --- Option B: Claude Desktop ---
 
@@ -147,18 +158,29 @@ STEP 3: CONFIGURE YOUR AI ASSISTANT (MCP HOST)
 
   3. Save and restart Cursor.
 
-*** IMPORTANT: Only run ONE instance of the MCP server at a time. ***
-    The server binds to ports 9877 (Remote Script), 9880 (dashboard), and
-    optionally 9878/9879 (M4L bridge). If two hosts try to start it simultaneously
-    (e.g. Claude Desktop and Cowork both have it configured), the second instance
-    will fail to bind and report a connection error.
+*** IMPORTANT: Only ONE MCP host should own AbletonBridge at a time. ***
 
-    If switching from Claude Desktop to Cowork: remove the AbletonBridge entry
-    from claude_desktop_config.json and restart Claude Desktop before using the
-    Cowork plugin. Kill any lingering processes with:
+    The server binds to fixed ports: 9877 (Ableton Remote Script), 9880
+    (dashboard), 9881 (singleton lock), and optionally 9878/9879 (M4L bridge).
+    If two hosts both try to start the server, the second will hit the singleton
+    lock on port 9881 and exit with an error — even if the error is not shown
+    prominently in the UI.
 
-        lsof -ti :9877 | xargs kill -9
-        lsof -ti :9880 | xargs kill -9
+    COWORK USERS: Do NOT add AbletonBridge to claude_desktop_config.json.
+    Desktop auto-starts all servers in that file at launch. Use the Cowork
+    plugin (.mcp.json) exclusively — Cowork starts the server itself.
+
+    DESKTOP USERS: Do NOT install the Cowork plugin while AbletonBridge is
+    in claude_desktop_config.json, unless you ensure Desktop is fully quit
+    before opening a Cowork session.
+
+    Switching from Desktop to Cowork:
+        1. Remove "AbletonBridge" from claude_desktop_config.json
+        2. Restart Claude Desktop (fully quit and reopen)
+        3. Kill any lingering processes:
+               lsof -ti :9881 | xargs kill -9
+               lsof -ti :9877 | xargs kill -9
+        4. Open a Cowork session — the plugin starts the server automatically
 
 
 ================================================================================
