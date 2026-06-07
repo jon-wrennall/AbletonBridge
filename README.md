@@ -126,6 +126,31 @@ AbletonBridge is built to handle real-world sessions without crashing Ableton:
 
 ---
 
+## Claude Cowork Plugin
+
+A ready-to-install plugin for [Claude Cowork](https://claude.ai/cowork) is included in the `cowork-plugin/` directory. It wires up the AbletonBridge MCP server and provides four domain-specific skills so Claude knows how to use the tools effectively.
+
+### Skills included
+
+| Skill | Triggers | Covers |
+|---|---|---|
+| **Compose** | "create a beat", "write a melody", "add chords", "drum pattern", "bass line" | MIDI composition, creative generators, chord progressions, euclidean rhythms |
+| **Mix** | "mix", "add reverb", "EQ", "sound design", "load an effect", "set volume" | Mixer levels, device loading, parameter control, effect chains, snapshots |
+| **Session** | "play", "stop", "set tempo", "what tracks", "fire scene", "show me the session" | Transport, tracks, clips, scenes, browser navigation, recording |
+| **Deep Control** | "hidden parameters", "rack chain", "M4L", "Wavetable modulation", "audio analysis" | M4L bridge tools, hidden params, rack chains, note surgery, property monitoring |
+
+### Installation
+
+1. Ensure AbletonBridge is installed and Ableton is running with the Remote Script active (see setup instructions below)
+2. Open Cowork and drag `cowork-plugin/` onto the plugin drop zone, **or** zip the folder as `ableton-bridge.plugin` and open it:
+   ```bash
+   cd cowork-plugin && zip -r ../ableton-bridge.plugin . -x "*.DS_Store"
+   ```
+3. Accept the plugin in Cowork — the MCP server and all four skills will be available immediately
+4. For M4L tools: drag `AbletonBridge` from User Library → Audio Effects → Max Audio Effect onto any audio track in your session
+
+---
+
 ## Optional: ElevenLabs Voice & SFX Server
 
 19 tools for AI voice generation, sound effects, voice cloning, and transcription. Generated audio saves to your Ableton User Library.

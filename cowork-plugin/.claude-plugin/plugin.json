@@ -1,0 +1,9 @@
+{
+  "name": "ableton-bridge",
+  "version": "1.0.0",
+  "description": "Full Ableton Live control via AbletonBridge — compose, mix, arrange, and sound design directly from Cowork with 340 MCP tools.",
+  "author": {
+    "name": "jon-wrennall"
+  },
+  "keywords": ["ableton", "music", "daw", "midi", "production", "mcp"]
+}
