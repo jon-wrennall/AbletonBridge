@@ -753,7 +753,8 @@ def register_tools(mcp):
 
     @mcp.tool()
     @_tool_handler("loading instrument")
-    def load_instrument_or_effect(ctx: Context, track_index: int, uri: str) -> str:
+    def load_instrument_or_effect(ctx: Context, track_index: int, uri: str,
+                                   track_type: str = "track") -> str:
         """
         Load an instrument or effect onto a track using its URI or device name.
 
@@ -764,6 +765,7 @@ def register_tools(mcp):
         Parameters:
         - track_index: The index of the track to load the instrument on
         - uri: The URI of the instrument/effect, OR a device name (resolved automatically).
+        - track_type: Type of track: "track" (default), "return", or "master"
 
         You can pass any Ableton instrument, audio effect, or MIDI effect name
         directly — no need to call search_browser first.  The server resolves the
@@ -778,15 +780,19 @@ def register_tools(mcp):
           load_instrument_or_effect(track_index=0, uri="Analog")
           load_instrument_or_effect(track_index=2, uri="Reverb")
           load_instrument_or_effect(track_index=1, uri="Compressor")
+          load_instrument_or_effect(track_index=0, uri="UADx SSL G Bus Compressor", track_type="return")
 
         For presets or third-party items, use search_browser() to find the full URI.
         """
         _validate_index(track_index, "track_index")
+        if track_type not in ("track", "return", "master"):
+            return "Error: track_type must be 'track', 'return', or 'master'"
         uri = resolve_device_uri(uri)
         ableton = get_ableton_connection()
         result = ableton.send_command("load_browser_item", {
             "track_index": track_index,
-            "item_uri": uri
+            "item_uri": uri,
+            "track_type": track_type,
         })
 
         # Check if the instrument was loaded successfully

@@ -162,10 +162,10 @@ def get_browser_item(song, uri, path, ctrl=None):
         raise
 
 
-def load_browser_item(song, track_index, item_uri, ctrl=None):
+def load_browser_item(song, track_index, item_uri, ctrl=None, track_type="track"):
     """Load a browser item onto a track by URI."""
     try:
-        track = get_track(song, track_index)
+        track = get_track(song, track_index, track_type)
         if ctrl is None:
             raise RuntimeError("load_browser_item requires ctrl for application()")
         app = ctrl.application()
@@ -193,9 +193,9 @@ def load_browser_item(song, track_index, item_uri, ctrl=None):
         raise
 
 
-def load_instrument_or_effect(song, track_index, uri, ctrl=None):
+def load_instrument_or_effect(song, track_index, uri, ctrl=None, track_type="track"):
     """Load an instrument or effect onto a track by URI (alias)."""
-    return load_browser_item(song, track_index, uri, ctrl)
+    return load_browser_item(song, track_index, uri, ctrl, track_type=track_type)
 
 
 def _find_browser_item_by_name(browser, name, ctrl=None):
