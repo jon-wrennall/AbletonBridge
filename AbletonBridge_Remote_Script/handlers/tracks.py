@@ -287,16 +287,15 @@ def disarm_track(song, track_index, ctrl=None):
 def group_tracks(song, track_indices, name, ctrl=None):
     """Group tracks — not supported by the Remote Script API.
 
-    Ableton does not expose a group command to Python Control Surfaces.
-    The user must group tracks manually: select them in Ableton and press
-    Cmd+G (Mac) / Ctrl+G (Windows), then rename the group if needed.
+    Confirmed: Live.Application has no Commands enum and no invoke_command
+    method in Ableton Live 12.4.5. Grouping must be done manually.
     """
     if not track_indices or len(track_indices) < 2:
         raise ValueError("Need at least 2 track indices to group")
     raise NotImplementedError(
         "Track grouping is not available via the Remote Script API. "
-        "Select the tracks in Ableton and press Cmd+G (Mac) / Ctrl+G (Windows) "
-        "to group them, then use set_track_name to rename the group."
+        "Select the tracks in Ableton and press Cmd+G (Mac) / Ctrl+G (Windows), "
+        "then use set_track_name to rename the group."
     )
 
 
