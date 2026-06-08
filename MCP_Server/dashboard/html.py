@@ -111,7 +111,7 @@ async function refresh() {
     if (!d.ableton_connected) {
       sb.innerHTML = '<div class="status-banner banner-err"><span class="dot"></span>Ableton not connected — make sure the AbletonBridge Remote Script is loaded in Ableton Preferences → Tempo &amp; MIDI → Control Surfaces</div>';
     } else if (d.ableton_connected && d.m4l_connected && d.m4l_version_match === true) {
-      sb.innerHTML = '<div class="status-banner banner-ok"><span class="dot"></span>All systems operational — Ableton + M4L Bridge v'+d.m4l_bridge_version+' connected</div>';
+      sb.innerHTML = '<div class="status-banner banner-ok"><span class="dot"></span>Ableton connected — M4L Bridge v'+d.m4l_bridge_version+' also active (optional)</div>';
     } else if (d.ableton_connected && d.m4l_connected && d.m4l_version_match === false) {
       sb.innerHTML = '<div class="status-banner banner-warn"><span class="dot"></span>Ableton connected — M4L Bridge connected but version mismatch (server v'+d.version+', bridge v'+d.m4l_bridge_version+'). Update Devicev2.amxd from M4L_Device/ folder.</div>';
     } else if (d.ableton_connected && d.m4l_sockets_ready) {

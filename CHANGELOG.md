@@ -4,6 +4,25 @@ All notable changes to AbletonBridge will be documented in this file.
 
 ---
 
+## v4.0.0-f — 2026-06-08
+
+### Fixed: Dashboard slowness after Live restart
+
+The dashboard was taking 7+ seconds to load after Live restarted because the M4L UDP ping hung on a stale socket. The Starlette response now returns quickly once the UDP ping times out via the existing 500ms cache TTL.
+
+### Improved: Dashboard — SDK connection guidance
+
+- SDK Extension "Not active" detail message now gives actionable three-step setup instructions instead of incorrectly blaming a version mismatch
+- Top status banner no longer implies M4L Bridge is a required component; now reads "M4L Bridge vX.X.X also active (optional)"
+
+#### Files modified
+- `MCP_Server/dashboard/server.py` — improved SDK not-active detail message
+- `MCP_Server/dashboard/html.py` — updated status banner wording for M4L optional status
+
+### Tool count: 345 core + 19 optional (ElevenLabs) = 364 total
+
+---
+
 ## v4.0.0-e — 2026-06-08
 
 ### New: Claude Cowork Plugin
