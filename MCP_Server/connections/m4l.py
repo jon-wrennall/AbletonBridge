@@ -644,10 +644,10 @@ class M4LConnection:
         state.m4l_bridge_version = bridge_version
         state.m4l_last_success_time = _time.time()
 
-        # Compare major.minor parts for compatibility
+        # Compare full version — all three parts must match
         try:
-            server_parts = server_version.split(".")[:2]
-            bridge_parts = bridge_version.split(".")[:2]
+            server_parts = server_version.split(".")[:3]
+            bridge_parts = bridge_version.split(".")[:3]
             if server_parts != bridge_parts:
                 state.m4l_version_match = False
                 logger.warning(
