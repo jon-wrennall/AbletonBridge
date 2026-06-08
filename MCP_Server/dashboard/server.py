@@ -137,7 +137,7 @@ def get_connection_tiers() -> dict:
     # It only starts after Live calls activate() on the extension.
     sdk_ok = False
     sdk_version = None
-    sdk_detail = "Not active — run the extension host and restart Live to activate"
+    sdk_detail = "Not active — SDK version mismatch: extensions-sdk-1.0.0-beta.0 is incompatible with Live 12.4.5b3. Check beta.ableton.com for an updated SDK."
     try:
         import urllib.request, json as _json
         with urllib.request.urlopen("http://127.0.0.1:9878/health", timeout=0.5) as r:
