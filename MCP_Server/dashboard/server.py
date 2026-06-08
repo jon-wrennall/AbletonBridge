@@ -104,18 +104,11 @@ def get_connection_tiers() -> dict:
         try:
             state.ableton_connection.sock.getpeername()
             ableton_ok = True
-            # Try to pull Live version from cached session info
-            try:
-                vi = state.ableton_connection.send_command("get_ableton_version")
-                if isinstance(vi, dict):
-                    major = vi.get("major", "")
-                    minor = vi.get("minor", "")
-                    patch = vi.get("patch", "")
-                    ableton_version = f"{major}.{minor}.{patch}".strip(".")
-            except Exception:
-                pass
         except Exception:
             pass
+    # Pull Ableton version from M4L state if available (M4L is the reliable source)
+    if getattr(state, 'm4l_connected', False) and getattr(state, 'm4l_ableton_version', None):
+        ableton_version = state.m4l_ableton_version
     tiers["remote_script"] = {
         "label": "Remote Script (TCP 9877)",
         "ok": ableton_ok,
@@ -135,18 +128,25 @@ def get_connection_tiers() -> dict:
             else "Not loaded — optional deep-parameter tools unavailable"
         ),
         "warn": m4l_ok and state.m4l_version_match is False,
+        "optional": True,
         "tier": 2,
     }
 
     # --- Tier 3: Extensions SDK (HTTP 9883) ---
     sdk_ok = False
-    sdk_detail = "Not running — requires Live 12.4.5+ Suite + Node.js bridge"
+    sdk_version = None
+    sdk_detail = "Not running — start the Node.js SDK bridge (requires Live 12.4.5+ Suite)"
     try:
-        import urllib.request
+        import urllib.request, json as _json
         with urllib.request.urlopen("http://127.0.0.1:9883/status", timeout=0.5) as r:
             if r.status == 200:
                 sdk_ok = True
-                sdk_detail = "Connected (Live 12.4.5+ SDK)"
+                try:
+                    body = _json.loads(r.read().decode())
+                    sdk_version = body.get("version") or body.get("live_version")
+                except Exception:
+                    pass
+                sdk_detail = f"Connected — Live {sdk_version} SDK active" if sdk_version else "Connected — Live 12.4.5+ SDK active"
     except Exception:
         pass
     tiers["extensions_sdk"] = {
