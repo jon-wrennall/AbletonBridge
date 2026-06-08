@@ -45,6 +45,7 @@ MCP Server (modular architecture):
 
 - **Remote Script** (TCP+UDP) — runs inside Ableton as a Control Surface. TCP:9877 for commands, UDP:9882 for real-time parameter updates at 50+ Hz.
 - **M4L Bridge** (UDP/OSC) — optional Audio Effect device for hidden parameters, rack chain internals, audio analysis, modulation matrices, event monitoring, and more.
+- **Extensions SDK Bridge** (HTTP:9878, optional) — Ableton Live 12 Beta native extension (`AbletonParameterBridge`) exposes every plugin parameter directly via HTTP. Install the `.ablx` once; Live activates it automatically. Requires Live 12 Beta with Developer Mode on in Preferences → Extensions.
 - **ElevenLabs Server** (optional) — 19 tools for AI voice generation, sound effects, voice cloning. Requires `ELEVENLABS_API_KEY`.
 - **MCP Server Instructions** — cross-tool guidance injected into the AI's context on every connection. Covers workflow sequencing, compound tool preferences, M4L fallback logic, and input constraints.
 - **MCP Resources** — `ableton://session`, `ableton://tracks`, `ableton://capabilities` for direct data access.
@@ -53,7 +54,7 @@ MCP Server (modular architecture):
 
 ---
 
-## Tool Overview (340 core + 19 optional = 359 total)
+## Tool Overview (345 core + 19 optional = 364 total)
 
 | Area | Examples | Count |
 |---|---|---|
@@ -72,9 +73,9 @@ MCP Server (modular architecture):
 | Audio Analysis | audio clip info, track meters, input meters | ~3 |
 | Grid Notation | ASCII drum/melodic pattern I/O | ~2 |
 | Compound Workflows | create instrument/drum track, batch mixer, effect chains | ~11 |
-| **Core subtotal** | | **340** |
+| **Core subtotal** | | **345** |
 | ElevenLabs (optional) | voice generation, SFX, cloning, transcription | 19 |
-| **Total** | | **359** |
+| **Total** | | **364** |
 
 See [CHANGELOG.md](CHANGELOG.md) for the complete per-tool breakdown.
 
@@ -100,7 +101,7 @@ AbletonBridge is built to handle real-world sessions without crashing Ableton:
 - **Concurrency control** — async semaphore serializes tool dispatch; threading locks protect TCP and UDP sockets from corruption
 - **Tool execution timeout** — 120s hard timeout prevents stuck tools from blocking the entire pipeline
 - **Bounded thread pool** — explicit 8-worker limit prevents resource exhaustion during rapid tool call bursts
-- **Standardized responses** — all 340 tools return consistent `tool_success()`/`tool_error()` JSON envelopes via decorator
+- **Standardized responses** — all 345 tools return consistent `tool_success()`/`tool_error()` JSON envelopes via decorator
 - **Chunk reassembly hardening** — duplicate detection, progress logging, missing chunk index reporting
 - **Parameter resolution cache** — 500-entry FIFO cache for brute-force display→value resolution (O(1) after first call)
 - **Effect chain persistence** — saved templates survive server restarts via `~/.ableton-bridge/chain_templates.json`
@@ -122,7 +123,7 @@ AbletonBridge is built to handle real-world sessions without crashing Ableton:
 
 ## Version
 
-**v4.0.0** — see [CHANGELOG.md](CHANGELOG.md) for full release history.
+**v4.0.0-f** — see [CHANGELOG.md](CHANGELOG.md) for full release history.
 
 ---
 
