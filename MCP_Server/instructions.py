@@ -77,6 +77,8 @@ load_instrument_or_effect resolves built-in Ableton device names directly — "W
 
 When loading plugins onto tracks inside a group, always call set_track_fold(track_index, False) on the group track first to expand it. Ableton cannot load devices onto child tracks of a collapsed group via the Remote Script — the operation will silently fail or timeout.
 
+group_tracks is NOT supported by the Remote Script API — Ableton does not expose a group command to Python Control Surfaces. Tell the user to select the tracks manually and press Cmd+G (Mac) / Ctrl+G (Windows), then use set_track_name to rename the resulting group.
+
 ## Creative Tools
 
 Each generative tool (scale_constrained_generate, generate_chord_progression, generate_bass_line, harmonize_melody, quantize_to_scale) takes its own scale_name and root parameters. For consistency across a session, read get_song_scale first and pass its root_note and scale_name to each creative tool call.
