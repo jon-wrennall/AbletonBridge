@@ -92,6 +92,41 @@ def _release_singleton_lock(sock: socket.socket):
 
 
 # ===================================================================
+# Ableton reconnect watchdog (background thread)
+# ===================================================================
+
+def _ableton_reconnect_watchdog():
+    """Background thread: proactively reconnect to Ableton when the TCP
+    connection drops (e.g. after loading a new song which restarts the
+    Remote Script).  Polls every 5 s; backs off to 30 s once connected."""
+    import socket as _socket
+
+    while True:
+        try:
+            conn = state.ableton_connection
+            is_alive = False
+            if conn and conn.sock:
+                try:
+                    conn.sock.getpeername()
+                    is_alive = True
+                except Exception:
+                    pass
+
+            if not is_alive:
+                logger.info("Ableton watchdog: connection lost — attempting reconnect")
+                try:
+                    get_ableton_connection()  # handles create / validate internally
+                    logger.info("Ableton watchdog: reconnected successfully")
+                except Exception as e:
+                    logger.debug("Ableton watchdog: reconnect attempt failed: %s", e)
+                time.sleep(5)   # retry quickly after a failure
+            else:
+                time.sleep(30)  # check every 30 s when healthy
+        except Exception:
+            time.sleep(5)
+
+
+# ===================================================================
 # M4L auto-connect (background thread)
 # ===================================================================
 
@@ -226,6 +261,11 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
         except Exception as e:
             logger.warning("Could not connect to Ableton on startup: %s", e)
             logger.warning("Make sure the Ableton Remote Script is running")
+
+        # Ableton reconnect watchdog — proactively reconnects when TCP drops
+        threading.Thread(
+            target=_ableton_reconnect_watchdog, daemon=True, name="ableton-watchdog"
+        ).start()
 
         # Auto-connect M4L bridge in background
         threading.Thread(
