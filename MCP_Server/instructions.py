@@ -5,7 +5,7 @@ cross-tool usage patterns. See: https://blog.modelcontextprotocol.io/posts/2025-
 """
 
 SERVER_INSTRUCTIONS = """
-AbletonBridge provides 341 tools for controlling Ableton Live sessions. This guidance covers cross-tool relationships, sequencing, and constraints not documented on individual tools.
+AbletonBridge provides 345 tools for controlling Ableton Live sessions. This guidance covers cross-tool relationships, sequencing, and constraints not documented on individual tools.
 
 ## Startup
 
