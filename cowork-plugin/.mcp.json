@@ -5,7 +5,7 @@
       "args": [
         "run",
         "--directory",
-        "/path/to/AbletonBridge",
+        "/Users/jonwrennall/Documents/Claude/Projects/Music/AbletonBridge",
         "MCP_Server/server.py"
       ]
     }
