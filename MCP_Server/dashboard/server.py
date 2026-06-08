@@ -132,13 +132,15 @@ def get_connection_tiers() -> dict:
         "tier": 2,
     }
 
-    # --- Tier 3: Extensions SDK (HTTP 9883) ---
+    # --- Tier 3: Extensions SDK (HTTP 9878/health) ---
+    # The Parameter Bridge extension serves HTTP on TCP 9878 (distinct from M4L UDP 9878).
+    # It only starts after Live calls activate() on the extension.
     sdk_ok = False
     sdk_version = None
-    sdk_detail = "Not running — start the Node.js SDK bridge (requires Live 12.4.5+ Suite)"
+    sdk_detail = "Not active — run the extension host and restart Live to activate"
     try:
         import urllib.request, json as _json
-        with urllib.request.urlopen("http://127.0.0.1:9883/status", timeout=0.5) as r:
+        with urllib.request.urlopen("http://127.0.0.1:9878/health", timeout=0.5) as r:
             if r.status == 200:
                 sdk_ok = True
                 try:
@@ -150,7 +152,7 @@ def get_connection_tiers() -> dict:
     except Exception:
         pass
     tiers["extensions_sdk"] = {
-        "label": "Extensions SDK (HTTP 9883)",
+        "label": "Extensions SDK (TCP 9878/health)",
         "ok": sdk_ok,
         "detail": sdk_detail,
         "optional": True,
