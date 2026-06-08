@@ -75,6 +75,8 @@ Automation values are in the parameter's native range (usually 0.0-1.0 normalize
 
 load_instrument_or_effect resolves built-in Ableton device names directly — "Wavetable", "Operator", "Drift", "Compressor", "EQ Eight", etc. Use search_browser only when loading user presets, third-party plugins, or items whose exact name is unknown (results are instant via cached index). Call refresh_browser_cache after installing new packs.
 
+When loading plugins onto tracks inside a group, always call set_track_fold(track_index, False) on the group track first to expand it. Ableton cannot load devices onto child tracks of a collapsed group via the Remote Script — the operation will silently fail or timeout.
+
 ## Creative Tools
 
 Each generative tool (scale_constrained_generate, generate_chord_progression, generate_bass_line, harmonize_melody, quantize_to_scale) takes its own scale_name and root parameters. For consistency across a session, read get_song_scale first and pass its root_note and scale_name to each creative tool call.
