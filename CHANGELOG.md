@@ -19,6 +19,17 @@ The dashboard was taking 7+ seconds to load after Live restarted because the M4L
 - `MCP_Server/dashboard/server.py` — improved SDK not-active detail message
 - `MCP_Server/dashboard/html.py` — updated status banner wording for M4L optional status
 
+### Fixed: Version numbering — switched to plain semver
+
+Previous patch versions used a `-letter` suffix (4.0.0-c through 4.0.0-f) which is not valid PEP 440. This caused `uv` to refuse to parse `pyproject.toml`, breaking server startup. All three version locations updated and M4L bridge version string aligned.
+
+**Version scheme going forward: `4.0.X` patch increments** (no letter suffixes).
+
+#### Files modified
+- `pyproject.toml` — 4.0.0-f → 4.0.6
+- `MCP_Server/__init__.py` — same
+- `M4L_Device/m4l_bridge.js` — version strings updated to 4.0.6
+
 ### Tool count: 345 core + 19 optional (ElevenLabs) = 364 total
 
 ---
