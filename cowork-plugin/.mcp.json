@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "AbletonBridge": {
-      "command": "uv",
+      "command": "/opt/homebrew/bin/uv",
       "args": [
         "run",
         "--directory",
