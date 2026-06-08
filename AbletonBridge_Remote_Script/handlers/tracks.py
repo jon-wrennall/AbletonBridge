@@ -285,20 +285,48 @@ def disarm_track(song, track_index, ctrl=None):
 
 
 def group_tracks(song, track_indices, name, ctrl=None):
-    """Group tracks — not supported by Remote Script API. Selects first track and returns guidance."""
-    if not track_indices or len(track_indices) == 0:
-        raise ValueError("No tracks specified")
-    for i in track_indices:
+    """Group tracks together and optionally name the group."""
+    if not track_indices or len(track_indices) < 2:
+        raise ValueError("Need at least 2 track indices to group")
+    sorted_indices = sorted(track_indices)
+    for i in sorted_indices:
         if i < 0 or i >= len(song.tracks):
             raise IndexError("Track index {0} out of range".format(i))
-    song.view.selected_track = song.tracks[track_indices[0]]
-    msg = ("Track grouping is not available via the Remote Script API. "
-           "Select the tracks in Ableton and use Edit > Group Tracks (Ctrl+G / Cmd+G).")
-    if ctrl:
-        ctrl.log_message(
-            "group_tracks: '{0}' — selected track {1}. {2}".format(
-                name, track_indices[0], msg))
-    raise NotImplementedError(msg)
+
+    import Live
+    app = Live.Application.get_application()
+
+    # Select the tracks via song.view (single first, then extend selection)
+    tracks_to_group = [song.tracks[i] for i in sorted_indices]
+    song.view.selected_track = tracks_to_group[0]
+
+    # Use selected_tracks tuple if available (Live 10.1+)
+    try:
+        song.view.selected_tracks = tuple(tracks_to_group)
+    except Exception:
+        pass
+
+    # Invoke the group command
+    try:
+        app.invoke_command(Live.Application.Application.Commands.group_track)
+    except Exception as e1:
+        try:
+            app.invoke_command("group_track")
+        except Exception as e2:
+            if ctrl:
+                ctrl.log_message("group_tracks invoke failed: {0} / {1}".format(e1, e2))
+            raise RuntimeError("Could not invoke group command: {0}".format(e2))
+
+    # Name the group — it will be at sorted_indices[0] after grouping
+    if name:
+        try:
+            new_group = song.tracks[sorted_indices[0]]
+            new_group.name = name
+        except Exception as e:
+            if ctrl:
+                ctrl.log_message("group_tracks: could not rename group: {0}".format(e))
+
+    return {"status": "ok", "message": "Grouped {0} tracks as '{1}'".format(len(track_indices), name)}
 
 
 def get_all_tracks_info(song, ctrl=None):

@@ -157,17 +157,18 @@ def register_tools(mcp):
 
     @mcp.tool()
     @_tool_handler("grouping tracks")
-    def group_tracks(ctx: Context, track_indices: list) -> str:
-        """Group multiple tracks together.
+    def group_tracks(ctx: Context, track_indices: list, name: str = "") -> str:
+        """Group multiple tracks together and optionally name the group.
 
         Parameters:
-        - track_indices: List of track indices to group together
+        - track_indices: List of track indices to group together (minimum 2)
+        - name: Optional name for the group track
         """
         if not isinstance(track_indices, list) or len(track_indices) < 2:
             return "Error: track_indices must be a list of at least 2 track indices"
         ableton = get_ableton_connection()
-        result = ableton.send_command("group_tracks", {"track_indices": track_indices})
-        return f"Grouped {len(track_indices)} tracks"
+        result = ableton.send_command("group_tracks", {"track_indices": track_indices, "name": name})
+        return f"Grouped {len(track_indices)} tracks" + (f" as '{name}'" if name else "")
 
     @mcp.tool()
     @_tool_handler("creating return track")
