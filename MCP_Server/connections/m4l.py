@@ -610,11 +610,11 @@ class M4LConnection:
         logger.info("M4L chunked response reassembled: %d chars from %d chunks", len(full_json), total)
         return json.loads(full_json)
 
-    def ping(self) -> bool:
+    def ping(self, timeout: float = None) -> bool:
         """Check if the M4L bridge device is responding."""
         import time as _time
         try:
-            result = self.send_command("ping")
+            result = self.send_command("ping", timeout=timeout)
             success = result.get("status") == "success"
             if success:
                 state.m4l_last_success_time = _time.time()

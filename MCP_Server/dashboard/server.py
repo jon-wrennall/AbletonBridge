@@ -83,7 +83,7 @@ def get_m4l_status() -> tuple:
         return sockets_ready, state.m4l_ping_cache["result"]
 
     try:
-        result = state.m4l_connection.ping()
+        result = state.m4l_connection.ping(timeout=1.5)
     except Exception as e:
         logger.debug("Dashboard M4L ping failed: %s", e)
         result = False
