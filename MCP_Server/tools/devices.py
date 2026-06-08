@@ -7,6 +7,7 @@ from mcp.server.fastmcp import Context
 from MCP_Server.tools._base import _tool_handler, _m4l_result
 from MCP_Server.connections.ableton import get_ableton_connection
 from MCP_Server.connections.m4l import get_m4l_connection
+from MCP_Server.connections.extensions_sdk import get_sdk_client
 from MCP_Server.validation import _validate_index, _validate_range
 from MCP_Server.cache.browser import resolve_device_uri, resolve_sample_uri, get_browser_cache
 import MCP_Server.state as state
@@ -461,12 +462,26 @@ def register_tools(mcp):
         _validate_index(device_index, "device_index")
         if track_type not in ("track", "return", "master"):
             return "Error: track_type must be 'track', 'return', or 'master'"
+
+        # Tier 1: Extensions SDK (async, more reliable for VST3/AU on Apple Silicon)
+        # Guard track_type first — avoids the ping cache check for return/master tracks
+        sdk = get_sdk_client() if track_type == "track" else None
+        if sdk:
+            try:
+                result = sdk.get_params(track_index, device_index)
+                result["_source"] = "extensions_sdk"
+                return json.dumps(result)
+            except Exception as e:
+                logger.debug("SDK bridge get_params failed, falling back to _Framework: %s", e)
+
+        # Tier 2: _Framework Remote Script (always available)
         ableton = get_ableton_connection()
         result = ableton.send_command("get_device_parameters", {
             "track_index": track_index,
             "device_index": device_index,
             "track_type": track_type,
         })
+        result["_source"] = "_framework"
         return json.dumps(result)
 
     @mcp.tool()
@@ -580,6 +595,21 @@ def register_tools(mcp):
         _validate_index(device_index, "device_index")
         if track_type not in ("track", "return", "master"):
             return "Error: track_type must be 'track', 'return', or 'master'"
+
+        # Tier 1: Extensions SDK
+        sdk = get_sdk_client() if track_type == "track" else None
+        if sdk:
+            try:
+                result = sdk.set_param(
+                    track_index, device_index, value, param_name=parameter_name
+                )
+                pname = result.get("parameter", parameter_name)
+                clamped = " (clamped to valid range)" if result.get("clamped") else ""
+                return f"Set parameter '{pname}' to {result.get('value')}{clamped} [Extensions SDK]"
+            except Exception as e:
+                logger.debug("SDK bridge set_param failed, falling back to _Framework: %s", e)
+
+        # Tier 2: _Framework Remote Script
         ableton = get_ableton_connection()
         result = ableton.send_command("set_device_parameter", {
             "track_index": track_index,
@@ -2062,3 +2092,66 @@ def register_tools(mcp):
         ableton = get_ableton_connection()
         result = ableton.send_command("get_appointed_device", {})
         return json.dumps(result)
+
+    @mcp.tool()
+    @_tool_handler("getting bridge status")
+    def get_bridge_status(ctx: Context) -> str:
+        """
+        Check which parameter transport layers are currently active.
+
+        AbletonBridge uses two tiers for standard device parameter control:
+          1. Extensions SDK bridge (optional, best for VST3/AU, Live 12.4.5+ Suite)
+          2. _Framework Remote Script (always active)
+
+        The M4L bridge is a parallel tier for hidden/undiscoverable parameters
+        (discover_params, get_hidden_params) — not a fallback in the standard flow.
+
+        get_device_parameters and set_device_parameter prefer SDK when available.
+        """
+        lines = []
+
+        # Extensions SDK
+        sdk = get_sdk_client()
+        if sdk:
+            version = sdk.get_version()
+            try:
+                tracks = sdk.get_tracks()
+                track_count = len(tracks.get("tracks", []))
+            except Exception:
+                track_count = "?"
+            lines.append(
+                f"Extensions SDK bridge: ACTIVE (HTTP port 9883, v{version})\n"
+                f"  → get_device_parameters / set_device_parameter prefer this tier\n"
+                f"  → Tracks visible: {track_count}"
+            )
+        else:
+            lines.append(
+                "Extensions SDK bridge: NOT RUNNING (port 9883)\n"
+                "  → Requires AbletonParameterBridge + Live 12.4.5+ Suite\n"
+                "  → See docs/extensions_sdk_bridge.md for setup"
+            )
+
+        # M4L
+        try:
+            from MCP_Server.connections.m4l import get_m4l_connection
+            m4l = get_m4l_connection()
+            lines.append(
+                f"M4L bridge: ACTIVE (UDP 9878/9879, v{state.m4l_bridge_version or 'unknown'})\n"
+                "  → Provides hidden params, rack internals, audio analysis"
+            )
+        except Exception:
+            lines.append(
+                "M4L bridge: NOT LOADED\n"
+                "  → Load the AbletonBridge M4L device on any track in Ableton"
+            )
+
+        # _Framework
+        from MCP_Server.connections.ableton import get_ableton_connection
+        try:
+            ableton = get_ableton_connection()
+            lines.append("_Framework Remote Script: ACTIVE (TCP 9877) — base layer, always available")
+        except Exception:
+            lines.append("_Framework Remote Script: NOT CONNECTED (TCP 9877)")
+
+        return "\n\n".join(lines)
+
