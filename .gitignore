@@ -25,3 +25,6 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Cowork plugin build artifact (re-generate with: cd cowork-plugin && zip -r ../ableton-bridge.plugin .)
+*.plugin
