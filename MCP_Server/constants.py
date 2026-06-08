@@ -74,7 +74,12 @@ MODIFYING_COMMANDS: frozenset = TIER_0_COMMANDS | TIER_1_COMMANDS | TIER_2_COMMA
 # Per-command timeout overrides for legitimately slow operations.
 # Used by send_command() when the caller doesn't specify a timeout.
 SLOW_COMMAND_TIMEOUTS: Dict[str, float] = {
-    "load_instrument_or_effect": 30.0,
+    # Plugin loading — VST3/AU can take 10-20 s to instantiate; use 60 s
+    "load_instrument_or_effect": 60.0,
+    "load_device_preset": 60.0,
+    "insert_device_by_name": 60.0,
+    "load_browser_item": 60.0,
+    "apply_effect_chain": 60.0,
     "load_sample": 30.0,
     "load_drum_kit": 30.0,
     "freeze_track": 60.0,
