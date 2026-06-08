@@ -4,6 +4,64 @@ All notable changes to AbletonBridge will be documented in this file.
 
 ---
 
+## v4.0.0-e — 2026-06-08
+
+### New: Claude Cowork Plugin
+
+Added a ready-to-install Cowork plugin (`cowork-plugin/`) providing four domain skills and automatic MCP server configuration:
+
+- `/compose` — beat, melody, chord, arpeggio, and bass line generation
+- `/mix` — volume, pan, sends, EQ, compression, and effects
+- `/session` — transport, recording, scenes, clips, and arrangement
+- `/deep-control` — M4L bridge tools: hidden parameters, rack internals, snapshots
+
+#### Files added
+- `cowork-plugin/.claude-plugin/plugin.json`
+- `cowork-plugin/.mcp.json` — MCP server config (uses placeholder path for portability)
+- `cowork-plugin/skills/compose/SKILL.md` + `references/creative-tools.md`
+- `cowork-plugin/skills/mix/SKILL.md` + `references/mixer-and-devices.md`
+- `cowork-plugin/skills/session/SKILL.md`
+- `cowork-plugin/skills/deep-control/SKILL.md` + `references/m4l-tools.md`
+- `cowork-plugin/README.md`
+
+### Improved: Dashboard M4L Bridge Detail Panel
+
+Added a dedicated M4L Bridge section to the status dashboard showing UDP socket state, device responding status, bridge version, version match, and last-connected timestamp. Status banners now include actionable fix instructions per failure state.
+
+#### Files modified
+- `MCP_Server/state.py` — added `m4l_last_success_time` and `m4l_version_match` fields
+- `MCP_Server/connections/m4l.py` — populate new state fields on ping/version check
+- `MCP_Server/dashboard/server.py` — expose new fields in `/api/status` JSON
+- `MCP_Server/dashboard/html.py` — M4L detail panel, smarter status banners
+
+### Improved: Singleton Lock Error Visibility
+
+The singleton lock error (port 9881 already in use) now prints to stderr with flush so MCP clients surface the message rather than silently failing. Error text includes specific kill commands to resolve the conflict.
+
+#### Files modified
+- `MCP_Server/server.py`
+
+### Bug Fix: `load_instrument_or_effect` track_type routing
+
+`track_type` parameter was not being passed through `load_browser_item`, causing return/master track loads to always target a regular track.
+
+#### Files modified
+- `MCP_Server/tools/browser.py`
+
+### Docs: Installation guide — Cowork vs Desktop conflict
+
+Expanded port conflict warnings to explain why AbletonBridge must not be in `claude_desktop_config.json` when using Cowork. Added step-by-step remediation for the common misconfiguration.
+
+#### Files modified
+- `installation_process.txt`
+- `README.md`
+
+### Tool count: **345** core + **19 optional** (ElevenLabs) = **364 total**
+
+*Note: Previous entries listed 340 core tools; the correct count including `midi_cc.py` (5 tools) is 345.*
+
+---
+
 ## v4.0.0-d — 2026-06-07
 
 ### Dependencies: MIDI CC support promoted to core

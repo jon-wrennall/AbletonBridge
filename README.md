@@ -1,6 +1,6 @@
 # AbletonBridge
 
-**359 tools connecting Claude AI to Ableton Live** (340 core + 19 optional ElevenLabs voice/SFX tools)
+**364 tools connecting Claude AI to Ableton Live** (345 core + 19 optional ElevenLabs voice/SFX tools)
 
 AbletonBridge gives Claude direct control over your Ableton Live session through the Model Context Protocol. Create tracks, write MIDI, design sounds, mix, automate, browse instruments, snapshot presets, and navigate deep into device chains and modulation matrices — all through natural language conversation.
 
@@ -38,7 +38,7 @@ MCP Server (modular architecture):
   connections/       — ableton.py (TCP), m4l.py (UDP/OSC)
   cache/             — browser.py (cache + disk persistence)
   dashboard/         — html.py, server.py (Starlette)
-  tools/             — 15 modules (340 tools)
+  tools/             — 15 modules (345 tools)
   prompts.py         — 4 MCP prompt templates
   instructions.py    — server instructions (cross-tool guidance)
 ```
