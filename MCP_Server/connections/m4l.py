@@ -658,12 +658,13 @@ class M4LConnection:
                     bridge_version,
                 )
             else:
+                if state.m4l_version_match is not True:
+                    logger.info(
+                        "M4L bridge v%s connected — versions match server v%s",
+                        bridge_version,
+                        server_version,
+                    )
                 state.m4l_version_match = True
-                logger.info(
-                    "M4L bridge v%s connected — versions match server v%s",
-                    bridge_version,
-                    server_version,
-                )
         except (ValueError, IndexError):
             logger.warning(
                 "Could not parse versions for comparison: server=%s, bridge=%s",
