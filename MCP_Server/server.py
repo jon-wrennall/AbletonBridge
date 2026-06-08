@@ -383,16 +383,20 @@ def resource_capabilities() -> str:
 # ===================================================================
 # Tool call instrumentation — captures every tool call for the dashboard
 # ===================================================================
+# FastMCP registers self.call_tool as the handler during __init__, so
+# monkey-patching mcp.call_tool after the fact is a no-op.  We patch
+# mcp._tool_manager.call_tool instead, which IS called by the already-
+# registered handler on every real tool invocation.
 
-_original_call_tool = mcp.call_tool
+_original_tm_call_tool = mcp._tool_manager.call_tool
 
 
-async def _instrumented_call_tool(name: str, arguments: dict) -> Any:
+async def _instrumented_tm_call_tool(name: str, arguments: dict, **kwargs) -> Any:
     """Wrap every tool call to record metrics for the dashboard."""
     start = time.time()
     error_msg = None
     try:
-        result = await _original_call_tool(name, arguments)
+        result = await _original_tm_call_tool(name, arguments, **kwargs)
         return result
     except Exception as e:
         error_msg = str(e)
@@ -411,7 +415,7 @@ async def _instrumented_call_tool(name: str, arguments: dict) -> Any:
             state.tool_call_counts[name] = state.tool_call_counts.get(name, 0) + 1
 
 
-mcp.call_tool = _instrumented_call_tool
+mcp._tool_manager.call_tool = _instrumented_tm_call_tool
 
 
 # ===================================================================
