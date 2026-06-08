@@ -21,6 +21,10 @@ NON_IDEMPOTENT_COMMANDS = frozenset([
     "delete_clip", "delete_scene", "delete_device",
     "duplicate_track", "duplicate_clip", "duplicate_scene", "add_notes_to_clip",
     "add_notes_extended", "delete_return_track",
+    # Plugin loading — never retry; a timeout may mean the plugin loaded but
+    # the GUI blocked the response, causing duplicate devices on retry
+    "load_instrument_or_effect", "load_device_preset", "insert_device_by_name",
+    "load_sample", "load_drum_kit",
 ])
 
 
