@@ -4,7 +4,7 @@ All notable changes to AbletonBridge will be documented in this file.
 
 ---
 
-## v4.0.0-f — 2026-06-08
+## v4.0.6 — 2026-06-08
 
 ### Fixed: Dashboard slowness after Live restart
 
