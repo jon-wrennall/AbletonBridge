@@ -178,7 +178,33 @@ def load_browser_item(song, track_index, item_uri, ctrl=None, track_type="track"
                 "Browser item '{0}' (URI: {1}) is not loadable".format(item.name, item_uri))
 
         song.view.selected_track = track
-        app.browser.load_item(item)
+        device_count_before = len(track.devices)
+        try:
+            app.browser.load_item(item)
+        except Exception as load_err:
+            # Ableton's Live API raises "Timeout waiting for operation to complete"
+            # for slow-loading VST3/AU plugins (e.g. Softube Console 1 on first
+            # instantiation). The plugin may have loaded successfully despite the
+            # timeout, so check the device count before propagating the error.
+            err_str = str(load_err)
+            if "Timeout" in err_str or "timeout" in err_str:
+                device_count_after = len(track.devices)
+                if device_count_after > device_count_before:
+                    # Plugin loaded — return success, ignore the timeout
+                    loaded_device = track.devices[device_count_after - 1]
+                    if ctrl:
+                        ctrl.log_message(
+                            "load_browser_item: Live API timed out but device "
+                            "'{0}' was added — treating as success".format(
+                                getattr(loaded_device, 'name', item.name)))
+                    return {
+                        "loaded": True,
+                        "item_name": item.name,
+                        "track_name": track.name,
+                        "uri": item_uri,
+                        "note": "Live API timeout ignored — device confirmed loaded",
+                    }
+            raise
 
         return {
             "loaded": True,
