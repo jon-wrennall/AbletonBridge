@@ -93,16 +93,99 @@ def get_m4l_status() -> tuple:
     return sockets_ready, result
 
 
-def build_status_json() -> dict:
-    """Collect all dashboard status data into a JSON-serializable dict."""
-    ableton_connected = False
+def get_connection_tiers() -> dict:
+    """Return status of every parameter/control transport tier."""
+    tiers = {}
+
+    # --- Tier 1: Remote Script (TCP 9877) ---
+    ableton_ok = False
+    ableton_version = None
     if state.ableton_connection and state.ableton_connection.sock:
         try:
             state.ableton_connection.sock.getpeername()
-            ableton_connected = True
+            ableton_ok = True
+            # Try to pull Live version from cached session info
+            try:
+                vi = state.ableton_connection.send_command("get_ableton_version")
+                if isinstance(vi, dict):
+                    major = vi.get("major", "")
+                    minor = vi.get("minor", "")
+                    patch = vi.get("patch", "")
+                    ableton_version = f"{major}.{minor}.{patch}".strip(".")
+            except Exception:
+                pass
         except Exception:
             pass
+    tiers["remote_script"] = {
+        "label": "Remote Script (TCP 9877)",
+        "ok": ableton_ok,
+        "detail": f"Ableton Live {ableton_version}" if ableton_version else ("Connected" if ableton_ok else "Not connected — load AbletonBridge in Control Surfaces"),
+        "tier": 1,
+    }
 
+    # --- Tier 2: M4L Bridge (UDP 9878/9879) ---
+    m4l_sockets, m4l_ok = get_m4l_status()
+    tiers["m4l_bridge"] = {
+        "label": "M4L Bridge (UDP 9878→9879)",
+        "ok": m4l_ok,
+        "detail": (
+            f"v{state.m4l_bridge_version} connected" if m4l_ok and state.m4l_bridge_version
+            else "Device responding" if m4l_ok
+            else "Sockets bound, device not responding — drag AbletonBridge.amxd onto an audio track" if m4l_sockets
+            else "Not loaded — optional deep-parameter tools unavailable"
+        ),
+        "warn": m4l_ok and state.m4l_version_match is False,
+        "tier": 2,
+    }
+
+    # --- Tier 3: Extensions SDK (HTTP 9883) ---
+    sdk_ok = False
+    sdk_detail = "Not running — requires Live 12.4.5+ Suite + Node.js bridge"
+    try:
+        import urllib.request
+        with urllib.request.urlopen("http://127.0.0.1:9883/status", timeout=0.5) as r:
+            if r.status == 200:
+                sdk_ok = True
+                sdk_detail = "Connected (Live 12.4.5+ SDK)"
+    except Exception:
+        pass
+    tiers["extensions_sdk"] = {
+        "label": "Extensions SDK (HTTP 9883)",
+        "ok": sdk_ok,
+        "detail": sdk_detail,
+        "optional": True,
+        "tier": 3,
+    }
+
+    # --- MIDI CC virtual port ---
+    cc_ok = False
+    cc_detail = "mido / python-rtmidi not installed"
+    try:
+        import mido
+        port_names = mido.get_output_names()
+        if "AbletonBridge" in port_names:
+            cc_ok = True
+            cc_detail = "Virtual MIDI port open — 100 plugin maps loaded"
+        else:
+            cc_ok = True  # mido available, port will be created on first use
+            cc_detail = "Ready — virtual port will open on first CC send"
+    except ImportError:
+        pass
+    tiers["midi_cc"] = {
+        "label": "MIDI CC (virtual port)",
+        "ok": cc_ok,
+        "detail": cc_detail,
+        "optional": True,
+        "tier": None,
+    }
+
+    return tiers
+
+
+def build_status_json() -> dict:
+    """Collect all dashboard status data into a JSON-serializable dict."""
+    connection_tiers = get_connection_tiers()
+    ableton_connected = connection_tiers["remote_script"]["ok"]
     m4l_sockets_ready, m4l_connected = get_m4l_status()
 
     with state.tool_call_lock:
@@ -151,6 +234,7 @@ def build_status_json() -> dict:
         "recent_calls": recent,
         "server_logs": server_logs,
         "tool_count": tool_count,
+        "connection_tiers": connection_tiers,
     }
 
 

@@ -80,6 +80,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   <div id="status-banner"></div>
   <div class="grid" id="cards"></div>
   <div class="section" id="m4l-detail"></div>
+  <div class="section" id="connection-tiers"></div>
   <div class="section" id="top-tools-section"></div>
   <div class="section">
     <h2>Recent Tool Calls</h2>
@@ -153,6 +154,39 @@ async function refresh() {
       ];
       m4lPanel.innerHTML = '<h2>M4L Bridge (Parameter Extension)</h2>' +
         '<table><tbody>' + rows.map(([k,v]) => '<tr><td style="width:180px;color:#8b949e">'+k+'</td><td>'+v+'</td></tr>').join('') + '</tbody></table>';
+    }
+    // Connection tiers
+    const ct = document.getElementById('connection-tiers');
+    if (ct && d.connection_tiers) {
+      const tierOrder = ['remote_script', 'm4l_bridge', 'extensions_sdk', 'midi_cc'];
+      const tierLabels = {
+        remote_script: 'Core',
+        m4l_bridge: 'Parameter Extension',
+        extensions_sdk: 'SDK Extension',
+        midi_cc: 'MIDI CC',
+      };
+      const rows = tierOrder.map(key => {
+        const t = d.connection_tiers[key];
+        if (!t) return '';
+        let badge;
+        if (t.ok && !t.warn) {
+          badge = '<span class="status-ok">● Connected</span>';
+        } else if (t.ok && t.warn) {
+          badge = '<span class="status-warn">● Connected (mismatch)</span>';
+        } else if (t.optional) {
+          badge = '<span style="color:#484f58">○ Not loaded</span>';
+        } else {
+          badge = '<span class="status-err">● Disconnected</span>';
+        }
+        const tag = t.optional ? ' <span style="font-size:0.7rem;color:#484f58;background:#21262d;padding:1px 5px;border-radius:3px">optional</span>' : ' <span style="font-size:0.7rem;color:#1f6feb;background:#0d2040;padding:1px 5px;border-radius:3px">required</span>';
+        return '<tr>' +
+          '<td style="width:160px;color:#8b949e;font-size:0.78rem">' + tierLabels[key] + tag + '</td>' +
+          '<td style="width:160px">' + badge + '</td>' +
+          '<td style="color:#8b949e;font-size:0.82rem">' + escHtml(t.detail) + '</td>' +
+          '</tr>';
+      }).join('');
+      ct.innerHTML = '<h2>Connection Tiers</h2>' +
+        '<table><tbody>' + rows + '</tbody></table>';
     }
     // Top tools
     const tt = document.getElementById('top-tools-section');
