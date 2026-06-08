@@ -169,8 +169,8 @@
       "description": "Reverb send"
     },
     "Brilliance": {
-      "cc": 23,
-      "description": "Tone brilliance (treble EQ) (CC 23; remapped from 74→75→23 to avoid collision)"
+      "cc": 81,
+      "description": "Tone brilliance / treble EQ (CC 81; remapped to avoid collision)"
     }
   }
 }

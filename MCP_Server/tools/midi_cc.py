@@ -146,6 +146,32 @@ def _mido_unavailable() -> str:
 
 # ── Tool registration ─────────────────────────────────────────────────────────
 
+
+def _get_plugin_name_from_track(track_index: int) -> str:
+    """Return the name of the first device on a track that has a CC map.
+
+    Iterates all devices so the target plugin is found even when MIDI effects
+    or racks precede it. Falls back to devices[0] if no CC map match found.
+    Raises ConnectionError if the track info cannot be retrieved — _tool_handler
+    will convert this to a tool_error response.
+    """
+    try:
+        ableton = get_ableton_connection()
+        track_info = ableton.send_command("get_track_info", {"track_index": track_index})
+        devices = track_info.get("devices", [])
+    except Exception as e:
+        raise ConnectionError(f"Could not read track {track_index}: {e}") from e
+    plugin_name = ""
+    for _dev in devices:
+        _name = _dev.get("name", "")
+        if _name and _find_cc_map_for_plugin(_name):
+            plugin_name = _name
+            break
+    if not plugin_name and devices:
+        plugin_name = devices[0].get("name", "")
+    return plugin_name
+
+
 def register_tools(mcp) -> None:
     """Register MIDI CC tools with the MCP server."""
 
@@ -189,11 +215,7 @@ def register_tools(mcp) -> None:
         else:
             channel = (track_index % 16) + 1
 
-        # Look up plugin name to find CC map
-        ableton = get_ableton_connection()
-        track_info = ableton.send_command("get_track_info", {"track_index": track_index})
-        devices = track_info.get("devices", [])
-        plugin_name = devices[0].get("name", "") if devices else ""
+        plugin_name = _get_plugin_name_from_track(track_index)
 
         cc_map = _find_cc_map_for_plugin(plugin_name) if plugin_name else None
         if cc_map is None:
@@ -235,10 +257,20 @@ def register_tools(mcp) -> None:
         - track_index: The track index (0-based)
         """
         track_index = _i(track_index)
-        ableton = get_ableton_connection()
-        track_info = ableton.send_command("get_track_info", {"track_index": track_index})
-        devices = track_info.get("devices", [])
-        plugin_name = devices[0].get("name", "") if devices else ""
+        try:
+            ableton = get_ableton_connection()
+            track_info = ableton.send_command("get_track_info", {"track_index": track_index})
+            devices = track_info.get("devices", [])
+            plugin_name = ""
+            for _dev in devices:
+                _name = _dev.get("name", "")
+                if _name and _find_cc_map_for_plugin(_name):
+                    plugin_name = _name
+                    break
+            if not plugin_name and devices:
+                plugin_name = devices[0].get("name", "")
+        except Exception as e:
+            return f"Could not read track {track_index}: {e}"
 
         cc_map = _find_cc_map_for_plugin(plugin_name) if plugin_name else None
         if cc_map is None:
