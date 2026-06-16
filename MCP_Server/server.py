@@ -58,27 +58,64 @@ logger = logging.getLogger("AbletonBridge")
 # Singleton lock — prevent duplicate server instances
 # ===================================================================
 
+def _port_has_listener(port: int) -> bool:
+    """Return True if something is actively accepting connections on *port*."""
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    probe.settimeout(0.2)
+    try:
+        probe.connect(("127.0.0.1", port))
+        probe.close()
+        return True
+    except OSError:
+        return False
+    finally:
+        probe.close()
+
+
 def _acquire_singleton_lock() -> socket.socket:
     """Acquire an exclusive TCP port lock to prevent duplicate server instances.
 
+    Uses SO_REUSEADDR so the bind succeeds immediately after a crash or quick
+    restart (the OS may keep the previous socket in TIME_WAIT for a moment).
+    Before giving up on EADDRINUSE we probe whether something is *actively*
+    listening — if not, we retry briefly to handle the race where the previous
+    process is still releasing its socket.
+
     Returns the bound socket (caller must keep it alive for the server's
-    lifetime).  Raises RuntimeError if another instance already holds the lock.
+    lifetime).  Raises RuntimeError only when a real duplicate is confirmed.
     """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-        sock.bind(("127.0.0.1", state.SINGLETON_LOCK_PORT))
-        sock.listen(1)
-        logger.info("Singleton lock acquired on port %d", state.SINGLETON_LOCK_PORT)
-        return sock
-    except OSError as e:
-        sock.close()
-        raise RuntimeError(
-            f"Another AbletonBridge server instance is already running "
-            f"(port {state.SINGLETON_LOCK_PORT} is in use). "
-            f"Stop the other instance first."
-        ) from e
+    port = state.SINGLETON_LOCK_PORT
+    retries = 3
+    retry_delay = 0.3  # seconds between retries
+
+    for attempt in range(1, retries + 1):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind(("127.0.0.1", port))
+            sock.listen(1)
+            logger.info("Singleton lock acquired on port %d", port)
+            return sock
+        except OSError:
+            sock.close()
+            if _port_has_listener(port):
+                # A real server is actively listening — genuine duplicate.
+                raise RuntimeError(
+                    f"Another AbletonBridge instance is already running "
+                    f"(confirmed listener on port {port})."
+                )
+            if attempt < retries:
+                logger.debug(
+                    "Port %d not yet released by previous process, retrying in %.1fs "
+                    "(attempt %d/%d)...",
+                    port, retry_delay, attempt, retries,
+                )
+                time.sleep(retry_delay)
+
+    raise RuntimeError(
+        f"Could not acquire singleton lock on port {port} after {retries} attempts. "
+        f"Kill any lingering process with: lsof -ti :{port} | xargs kill -9"
+    )
 
 
 def _release_singleton_lock(sock: socket.socket):
@@ -231,14 +268,12 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
         except RuntimeError as e:
             msg = (
                 f"{e}\n"
-                "This usually means Claude Desktop (or another MCP host) is already\n"
-                "running AbletonBridge. Only one instance can run at a time.\n"
-                "Fix: remove AbletonBridge from claude_desktop_config.json, restart\n"
-                "Claude Desktop, then kill any lingering process:\n"
-                "  lsof -ti :9881 | xargs kill -9\n"
+                "Only one AbletonBridge instance can run at a time.\n"
+                "If no other instance is intentionally running, clear the stale lock:\n"
+                f"  lsof -ti :{state.SINGLETON_LOCK_PORT} | xargs kill -9\n"
                 "  lsof -ti :9877 | xargs kill -9"
             )
-            logger.error(msg)
+            logger.error("Startup aborted: %s", e)
             print(msg, file=sys.stderr, flush=True)
             sys.exit(1)
 
