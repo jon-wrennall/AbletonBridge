@@ -53,6 +53,11 @@ MCP_Server = ["browser_cache_seed.json", "midi_cc/*.json"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.3.0",
+]
+
 [project.urls]
 "Homepage" = "https://github.com/WilliamDeSimone/AbletonBridge"
 "Bug Tracker" = "https://github.com/WilliamDeSimone/AbletonBridge/issues"
