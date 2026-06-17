@@ -64,7 +64,6 @@ def _port_has_listener(port: int) -> bool:
     probe.settimeout(0.2)
     try:
         probe.connect(("127.0.0.1", port))
-        probe.close()
         return True
     except OSError:
         return False
@@ -72,48 +71,83 @@ def _port_has_listener(port: int) -> bool:
         probe.close()
 
 
+def _wait_for_port_free(port: int, timeout: float = 5.0, poll: float = 0.2) -> bool:
+    """Poll until *port* has no active listener or *timeout* seconds elapse.
+
+    Returns True if the port became free, False if it stayed occupied.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not _port_has_listener(port):
+            return True
+        time.sleep(poll)
+    return False
+
+
 def _acquire_singleton_lock() -> socket.socket:
     """Acquire an exclusive TCP port lock to prevent duplicate server instances.
 
-    Uses SO_REUSEADDR so the bind succeeds immediately after a crash or quick
-    restart (the OS may keep the previous socket in TIME_WAIT for a moment).
-    Before giving up on EADDRINUSE we probe whether something is *actively*
-    listening — if not, we retry briefly to handle the race where the previous
-    process is still releasing its socket.
+    The MCP host (claude.ai) sometimes spawns a new server process while the
+    previous one is still shutting down — the two processes overlap by up to
+    ~1 second.  This function handles that gracefully:
 
-    Returns the bound socket (caller must keep it alive for the server's
-    lifetime).  Raises RuntimeError only when a real duplicate is confirmed.
+    1. SO_REUSEADDR lets us rebind immediately after the OS releases a socket
+       that was in TIME_WAIT.
+    2. If the bind fails because a listener is actively on the port we wait up
+       to 5 seconds for it to go away (the MCP host is shutting down the
+       previous process in parallel).
+    3. Only if the port is still occupied after that timeout do we conclude it
+       is a genuine duplicate and raise RuntimeError.
+
+    Returns the bound socket (caller must keep it alive).
     """
     port = state.SINGLETON_LOCK_PORT
-    retries = 3
-    retry_delay = 0.3  # seconds between retries
 
-    for attempt in range(1, retries + 1):
+    def _try_bind() -> socket.socket | None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             sock.bind(("127.0.0.1", port))
             sock.listen(1)
-            logger.info("Singleton lock acquired on port %d", port)
             return sock
         except OSError:
             sock.close()
-            if _port_has_listener(port):
-                # A real server is actively listening — genuine duplicate.
-                raise RuntimeError(
-                    f"Another AbletonBridge instance is already running "
-                    f"(confirmed listener on port {port})."
-                )
-            if attempt < retries:
-                logger.debug(
-                    "Port %d not yet released by previous process, retrying in %.1fs "
-                    "(attempt %d/%d)...",
-                    port, retry_delay, attempt, retries,
-                )
-                time.sleep(retry_delay)
+            return None
+
+    # Fast path — no contention.
+    sock = _try_bind()
+    if sock:
+        logger.info("Singleton lock acquired on port %d", port)
+        return sock
+
+    # Port is in use.  If something is actively listening it might be the
+    # previous process that the MCP host is shutting down right now — wait.
+    if _port_has_listener(port):
+        logger.info(
+            "Port %d has an active listener; waiting up to 5s for previous "
+            "instance to shut down...", port
+        )
+        freed = _wait_for_port_free(port, timeout=5.0)
+        if not freed:
+            raise RuntimeError(
+                f"Another AbletonBridge instance is still running after 5s "
+                f"(port {port} occupied). Kill it with: "
+                f"lsof -ti :{port} | xargs kill -9"
+            )
+        logger.info("Previous instance released port %d — continuing startup", port)
+    else:
+        # Socket is in TIME_WAIT / being released — give the OS a moment.
+        logger.debug("Port %d not yet released by OS, waiting briefly...", port)
+        time.sleep(0.3)
+
+    # Retry after waiting.
+    sock = _try_bind()
+    if sock:
+        logger.info("Singleton lock acquired on port %d", port)
+        return sock
 
     raise RuntimeError(
-        f"Could not acquire singleton lock on port {port} after {retries} attempts. "
+        f"Could not acquire singleton lock on port {port}. "
         f"Kill any lingering process with: lsof -ti :{port} | xargs kill -9"
     )
 
